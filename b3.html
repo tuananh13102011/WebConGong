@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Tuán anh pro vip vai lin</title>
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:radial-gradient(circle,#020202,#000);
+}
+canvas{display:block;}
+</style>
+</head>
+<body>
+    <a href="https://www.facebook.com/profile.php?id=61563325292633&locale=vi_VN" style="position:fixed;top:10px;left:10px;color:#0ff;text-decoration:none;font-family:sans-serif;font-size:14px;z-index:1000;">Facebook</a>
+    
+<canvas id="c"></canvas>
+
+
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+
+let mouse={x:innerWidth/2,y:innerHeight/2};
+let isClick=false,isCharge=false,charge=0;
+
+window.addEventListener("mousemove",e=>{
+    mouse.x=e.clientX;
+    mouse.y=e.clientY;
+});
+window.addEventListener("mousedown",e=>{
+    if(e.button===0) isClick=true;
+    if(e.button===2) isCharge=true;
+});
+window.addEventListener("mouseup",()=>{
+    isClick=false; isCharge=false; charge=0;
+});
+window.addEventListener("contextmenu",e=>e.preventDefault());
+
+const COUNT=45,LENGTH=18;
+let bones=[];
+for(let i=0;i<COUNT;i++) bones.push({x:mouse.x,y:mouse.y});
+
+let wingTime=0;
+let sparks=[],flames=[],smokes=[],explosions=[];
+
+// ===== UPDATE =====
+function update(){
+    bones[0].x+=(mouse.x-bones[0].x)*0.25;
+    bones[0].y+=(mouse.y-bones[0].y)*0.25;
+
+    for(let i=1;i<bones.length;i++){
+        let dx=bones[i-1].x-bones[i].x;
+        let dy=bones[i-1].y-bones[i].y;
+        let a=Math.atan2(dy,dx);
+        bones[i].x=bones[i-1].x-Math.cos(a)*LENGTH;
+        bones[i].y=bones[i-1].y-Math.sin(a)*LENGTH;
+    }
+
+    wingTime+=0.18;
+    if(isCharge) charge=Math.min(charge+0.06,2);
+
+    [sparks,flames,smokes,explosions].forEach(arr=>{
+        arr.forEach(p=>{
+            p.x+=p.vx;
+            p.y+=p.vy;
+            p.life--;
+        });
+    });
+
+    sparks=sparks.filter(p=>p.life>0);
+    flames=flames.filter(p=>p.life>0);
+    smokes=smokes.filter(p=>p.life>0);
+    explosions=explosions.filter(p=>p.life>0);
+}
+
+// ===== XƯƠNG =====
+function drawBone(b1,b2,i){
+    let a=Math.atan2(b2.y-b1.y,b2.x-b1.x);
+    let len=Math.hypot(b2.x-b1.x,b2.y-b1.y);
+    let size=5+(COUNT-i)*0.18;
+
+    ctx.save();
+    ctx.translate(b1.x,b1.y);
+    ctx.rotate(a);
+
+    ctx.shadowBlur=20;
+    ctx.shadowColor="#00f7ff";
+
+    ctx.strokeStyle="rgba(170,255,255,0.9)";
+    ctx.lineWidth=size*0.6;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(len,0);
+    ctx.stroke();
+
+    let seg=Math.floor(len/6);
+    for(let j=1;j<seg;j++){
+        let x=(len/seg)*j;
+        ctx.beginPath();
+        ctx.fillStyle="rgba(255,255,255,"+(j/seg)+")";
+        ctx.arc(x,0,size*0.45,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle="#fff";
+    ctx.arc(0,0,size,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(len,0,size,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// ===== LIGHTNING =====
+function drawLightning(x1,y1,x2,y2){
+    ctx.strokeStyle="cyan";
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    for(let i=1;i<6;i++){
+        let t=i/6;
+        ctx.lineTo(
+            x1+(x2-x1)*t+(Math.random()-0.5)*12,
+            y1+(y2-y1)*t+(Math.random()-0.5)*12
+        );
+    }
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+}
+
+// ===== CÁNH =====
+function drawWing(x,y,a,s){
+    let flap=Math.sin(wingTime)*1.1;
+
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(a);
+    ctx.scale(s,1);
+    ctx.rotate(flap);
+
+    let arr=[80,110,140,170,210];
+
+    arr.forEach((l,i)=>{
+        let ang=(-0.6+i*0.3)+flap*0.6;
+        let px=Math.cos(ang)*l;
+        let py=Math.sin(ang)*l;
+
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(px,py);
+        ctx.strokeStyle="#ccffff";
+        ctx.stroke();
+
+        drawLightning(0,0,px,py);
+    });
+
+    ctx.restore();
+}
+
+// ===== ĐẦU =====
+function drawHead(h){
+    let a=Math.atan2(mouse.y-h.y,mouse.x-h.x);
+
+    ctx.save();
+    ctx.translate(h.x,h.y);
+    ctx.rotate(a);
+    ctx.scale(1.5,1.5);
+
+    ctx.shadowBlur=40;
+    ctx.shadowColor="#00f7ff";
+
+    ctx.fillStyle="#00f7ff";
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(35,-14);
+    ctx.lineTo(55,0);
+    ctx.lineTo(35,14);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle="#fff";
+    for(let i=0;i<6;i++){
+        ctx.beginPath();
+        ctx.moveTo(25+i*5,5);
+        ctx.lineTo(28+i*5,14);
+        ctx.lineTo(22+i*5,14);
+        ctx.fill();
+    }
+
+    ctx.fillStyle="red";
+    ctx.beginPath();
+    ctx.arc(30,-6,5,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.strokeStyle="#ccffff";
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(20,-10); ctx.lineTo(5,-45); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(20,10); ctx.lineTo(5,45); ctx.stroke();
+
+    ctx.restore();
+}
+
+// ===== FIRE + SMOKE =====
+function shootFire(){
+    let h=bones[0];
+    let a=Math.atan2(mouse.y-h.y,mouse.x-h.x);
+
+    for(let i=0;i<6;i++){
+        flames.push({
+            x:h.x,y:h.y,
+            vx:Math.cos(a)*5+(Math.random()-0.5),
+            vy:Math.sin(a)*5+(Math.random()-0.5),
+            life:35
+        });
+
+        smokes.push({
+            x:h.x,y:h.y,
+            vx:Math.cos(a)*2+(Math.random()-0.5),
+            vy:Math.sin(a)*2+(Math.random()-0.5),
+            life:50
+        });
+    }
+}
+
+function drawFlame(){
+    flames.forEach(f=>{
+        ctx.beginPath();
+        ctx.fillStyle="rgba(255,140,0,"+f.life/35+")";
+        ctx.arc(f.x,f.y,5,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+function drawSmoke(){
+    smokes.forEach(s=>{
+        ctx.beginPath();
+        ctx.fillStyle="rgba(200,200,200,"+s.life/50+")";
+        ctx.arc(s.x,s.y,6,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+// ===== LASER MULTI LINE =====
+function drawLaser(){
+    if(charge < 1) return;
+
+    let h = bones[0];
+    let dx = mouse.x - h.x;
+    let dy = mouse.y - h.y;
+    let baseAngle = Math.atan2(dy, dx);
+
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = "cyan";
+
+    let lines = 6;
+
+    for(let i = 0; i < lines; i++){
+        let spread = (i - lines/2) * 0.05;
+        let a = baseAngle + spread;
+
+        let length = Math.hypot(dx, dy);
+        let x2 = h.x + Math.cos(a) * length;
+        let y2 = h.y + Math.sin(a) * length;
+
+        ctx.strokeStyle = "rgba(0,255,255,0.8)";
+        ctx.lineWidth = 2 + Math.random()*2;
+
+        ctx.beginPath();
+        ctx.moveTo(h.x, h.y);
+
+        for(let j = 1; j < 6; j++){
+            let t = j / 6;
+            ctx.lineTo(
+                h.x + (x2 - h.x)*t + (Math.random()-0.5)*8,
+                h.y + (y2 - h.y)*t + (Math.random()-0.5)*8
+            );
+        }
+
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+    // 💥 nổ
+    for(let i=0;i<10;i++){
+        explosions.push({
+            x:mouse.x,
+            y:mouse.y,
+            vx:(Math.random()-0.5)*6,
+            vy:(Math.random()-0.5)*6,
+            life:30
+        });
+    }
+}
+
+function drawExplosion(){
+    explosions.forEach(e=>{
+        ctx.beginPath();
+        ctx.fillStyle="rgba(0,255,255,"+e.life/30+")";
+        ctx.arc(e.x,e.y,4,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+// ===== DRAW =====
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    let a=Math.atan2(mouse.y-bones[0].y,mouse.x-bones[0].x);
+
+    drawWing(bones[5].x,bones[5].y,a,1);
+    drawWing(bones[5].x,bones[5].y,a,-1);
+
+    for(let i=0;i<bones.length-1;i++){
+        drawBone(bones[i],bones[i+1],i);
+    }
+
+    if(isClick) shootFire();
+
+    drawFlame();
+    drawSmoke();
+    drawLaser();
+    drawExplosion();
+    drawHead(bones[0]);
+}
+
+// ===== LOOP =====
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
